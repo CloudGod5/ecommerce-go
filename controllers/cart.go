@@ -102,7 +102,51 @@ func (app *Application) RemoveItem() gin.Handlerfunc {
 }
 
 func GetItemFromCart() gin.Handlerfunc {
+	return func(c *gin.Context) {
+		user_id := c.Query("id")
 
+		if user_id == "" {
+			c.Header("Content-Type", "application/json")
+			c.JSON(http.StatusNotFound, gin.H{"Error":"Invalid id"})
+			c.Abort()
+			return
+		}
+
+		usert_id, _ := primitive.ObjectIDFromHex(user_id)
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var filledcart models.userID
+		err := UserCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: usert_id}}).Decode(&filledcart)
+
+		if err != nil {
+			log.Println(err)
+			c.IndentedJSON(500, "Internal Server Error")
+			return
+		}
+
+
+		filter_match := bson.D{{key:"$match", Value: bson.D{primitive.E{Key: "_id", Value: usert_id}}}}
+		unwind := bson.D{{key:"$unwind", Value: bson.D{primitive.E{Key: "$path", Value: "$usercart"}}}}
+		grouping := bson.D{{key:"$group", Value: bson.D{primitive.E{Key: "_id", Value: "$_id"}, {key:"total", Value:bson.D{primitive.E{Key: "$sum", Value: "$usercart.price"}}}}}}
+		pointcursor, err := UserCollection.Aggregate(ctx, mongo.Pipelin(filter_match, unwind, grouping))
+		if err != nil {
+			log.Println(err)
+		}
+
+		var listing []bson.M
+		if err = pointcursor.All(ctx, &listing); err != nil {
+			log.Println(err)
+			c.AbortWithStatus(http.StatusInternalServer)
+		}
+		for _, json := range listing {
+			c.IndentedJSON(200, json["total"])
+			c.IndentedJSON(200, filledcart.UserCart)
+		}
+		ctx.Done()
+
+	}
 }
 
 func (app *Application) BuyFromCart() gin.Handlerfunc {

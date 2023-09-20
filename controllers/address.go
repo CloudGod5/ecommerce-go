@@ -43,7 +43,7 @@ func DeleteAddress() gin.Handlerfunc {
 			return
 		}
 		defer cancel()
-		
+
 		ctx.Done()
 		c.IndentedJSON(200, "Address deleted successfully")
 
