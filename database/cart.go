@@ -109,14 +109,28 @@ func BuyItemFromCart(ctx context.Context, usercollection *mongo.Collection, user
 	_, err = userCollection.UpdateMany(ctx, filter, update)
 	if err != nil {
 		log.Println(err)
-		return ErrCantBuyCartItem
 	}
 
 	err = usercollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: id}}).Decode(&getcartitems)
 	if err != nil {
 		log.Println(err)
-		return ErrCantGetItem
 	}
+
+	filter2 := bson.D{primitive.E{Key: "_id", Value: id}}
+	update2 := bson.M{"$push": bson.M{"orders.$[].order_list": bson.M{"$each": getcartitems.UserCart}}}
+	_, err = userCollection.UpdateOne(ctx, filter2, update2)
+	if err != nil {
+		log.Println(err)
+	}
+
+	usercart_empty := make([]models.ProductUser, 0)
+	filter3 := bson.D{primitive.E{Key: "_id", Value: id}}
+	update3 := bson.D{{key: "$set", Value: bson.D{primitive.E{key: "usercart", Value: usercart_empty}}}}
+	_, err = userCollection.UpdateOne(ctx, filter3, update3)
+	if err != nil {
+		return ErrCantBuyCartItem
+	}
+	return nil
 
 }
 
