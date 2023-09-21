@@ -1,29 +1,30 @@
 package controllers
 
 import (
-	"time"
 	"context"
 	"errors"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/CloudGod5/ecommerce-go/database"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type Application struct {
+	prodCollection *mongo.Collection
+	userCollection *mongo.Collection
+}
 
-	type Application struct {
-		prodCollection *mongo.Collection
-		userCollection *mongo.Collection
+func NewApplication(prodCollection, userCollection *mongo.Collection) *Application {
+	return &Application{
+		prodCollection: prodCollection,
+		userCollection: userCollection,
 	}
-
-	func NewApplication(prodCollection, userCollection *mongo.Collection) *Application {
-		return &Application{
-			prodCollection: prodCollection, 
-			userCollection: userCollection
-		}
-	}
+}
 
 func (app *Application) AddToCart() gin.Handlerfunc {
 	return func(c *gin.Context) {
@@ -98,7 +99,6 @@ func (app *Application) RemoveItem() gin.Handlerfunc {
 
 	}
 
-
 }
 
 func GetItemFromCart() gin.Handlerfunc {
@@ -107,7 +107,7 @@ func GetItemFromCart() gin.Handlerfunc {
 
 		if user_id == "" {
 			c.Header("Content-Type", "application/json")
-			c.JSON(http.StatusNotFound, gin.H{"Error":"Invalid id"})
+			c.JSON(http.StatusNotFound, gin.H{"Error": "Invalid id"})
 			c.Abort()
 			return
 		}
@@ -126,10 +126,9 @@ func GetItemFromCart() gin.Handlerfunc {
 			return
 		}
 
-
-		filter_match := bson.D{{key:"$match", Value: bson.D{primitive.E{Key: "_id", Value: usert_id}}}}
-		unwind := bson.D{{key:"$unwind", Value: bson.D{primitive.E{Key: "$path", Value: "$usercart"}}}}
-		grouping := bson.D{{key:"$group", Value: bson.D{primitive.E{Key: "_id", Value: "$_id"}, {key:"total", Value:bson.D{primitive.E{Key: "$sum", Value: "$usercart.price"}}}}}}
+		filter_match := bson.D{{key: "$match", Value: bson.D{primitive.E{Key: "_id", Value: usert_id}}}}
+		unwind := bson.D{{key: "$unwind", Value: bson.D{primitive.E{Key: "$path", Value: "$usercart"}}}}
+		grouping := bson.D{{key: "$group", Value: bson.D{primitive.E{Key: "_id", Value: "$_id"}, {key: "total", Value: bson.D{primitive.E{Key: "$sum", Value: "$usercart.price"}}}}}}
 		pointcursor, err := UserCollection.Aggregate(ctx, mongo.Pipelin(filter_match, unwind, grouping))
 		if err != nil {
 			log.Println(err)

@@ -4,11 +4,17 @@ import (
 	"context"
 	"errors"
 	"log"
+	"time"
+
+	"github.com/CloudGod5/models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
 	ErrCantFindProduct    = error.New("can't find the product")
-	ErrCantDecodeProduct  = error.New("can't find this product.")
+	ErrCantDecodeProduct  = error.New("can't find this product")
 	ErrUserIdIsNotValid   = error.New("this user is not valid")
 	ErrCantUpdateUser     = error.New("can't add this product to the cart")
 	ErrCantRemoveItemCart = error.New("can't remove this item from the cart")
@@ -59,7 +65,7 @@ func RemoveCartItem(ctx context.Context, prodCollection, userCollection *mongo.C
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
 	update := bson.M{"$pull": bson.M{"usercart": bson.M{"_id": productID}}}
 
-	_, err = UpdateMany(ctx, filter, update)
+	_, err = userCollection.UpdateMany(ctx, filter, update)
 	if err != nil {
 		log.Println(err)
 		return ErrCantRemoveItemCart

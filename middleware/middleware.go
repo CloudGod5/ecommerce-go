@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"github.com/CloudGod5/ecommerce-go/tokens"
 	"net/http"
+	token "github.com/CloudGod5/ecommerce-go/tokens"
 	"github.com/gin-gonic/gin"
 )
 

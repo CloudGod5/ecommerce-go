@@ -5,10 +5,13 @@ import (
 	"log"
 	"time"
 	"os"
-	"database"
-	"github.com/dgrijalva/jwt-go"
+
+	"github.com/CloudGod5/ecommerce-go/database"
+	jwt "github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 

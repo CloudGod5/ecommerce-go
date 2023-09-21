@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	generate "github.com/CloudGod5/tokens"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
@@ -43,7 +44,7 @@ func VerifyPassword(userPassword string, givenPassword string) (bool, string) {
 func Signup() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
-		var ctx, canel = context.WithTimeOut(context.Background(), 100*time.Second)
+		var ctx, canel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
 		var user models.User
@@ -112,9 +113,10 @@ func Signup() gin.HandlerFunc {
 
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeOut(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
+		var founduser models.User
 		var user models.User
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON{http.StatusBadRequest, gin.H{"error": err.Error()}}
@@ -149,14 +151,33 @@ func Login() gin.HandlerFunc {
 }
 
 func ProductViewerAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var products models.Product
+		defer cancel()
+		if err := c.BindJSON(&products); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
+		products.Product_ID = primitive.NewObjectID()
+		_, anyerr := ProductCollection.InsertOne(ctx, products)
+		if anyerr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "the product was not created"})
+			return
+		}
+		defer cancel()
+
+		c.JSON(http.StatusOK, gin.H{"message": "product created successfully"})
+
+	}
 }
 
 func SearchProduct() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var productlist []models.Product
-		var ctx, cancel = context.WithTimeOut(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
 		cursor, err := ProductCollection.Find(ctx, bson.D{{}})
@@ -172,9 +193,9 @@ func SearchProduct() gin.HandlerFunc {
 			return
 		}
 
-		defer cursor.Close()
+		defer cursor.Close(ctx)
 
-		if err := cursor.err(); err != nil {
+		if err := cursor.Err(); err != nil {
 			log.PrintLn(err)
 			c.IndentedJSON(400, "invalid")
 			return
@@ -197,7 +218,7 @@ func SearchProductByQuery() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeOut(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
 		searchquerydb, err := ProductCollection.Find(ctx, bson.M{"product_name": bson.M{"$regex": queryParam}})
