@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	generate "github.com/CloudGod5/tokens"
+	"github.com/justintingley/ecommerce-go/database"
+	"github.com/justintingley/ecommerce-go/models"
+	generate "github.com/justintingley/ecommerce-go/tokens"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,7 +20,7 @@ import (
 )
 
 var UserCollection *mongo.Collection = database.UserData(database.Client, "Users")
-var productCollection *mongo.Collection = database.ProductData(database.Client, "Products")
+var ProductCollection *mongo.Collection = database.ProductData(database.Client, "Products")
 var Validate = validator.New()
 
 func HashPassword(password string) string {
@@ -41,15 +44,15 @@ func VerifyPassword(userPassword string, givenPassword string) (bool, string) {
 
 }
 
-func Signup() gin.HandlerFunc {
+func SignUp() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
-		var ctx, canel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
 		var user models.User
 		if err := c.BindJSON(&user); err != nil {
-			c.JSON{http.StatusBadRequest, gin.H{"error": err.Error()}}
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -74,7 +77,7 @@ func Signup() gin.HandlerFunc {
 
 		defer cancel()
 		if err != nil {
-			log.Panic
+			log.Panic(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -91,7 +94,7 @@ func Signup() gin.HandlerFunc {
 		user.Updated_At, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		user.ID = primitive.NewObjectID()
 		user.User_ID = user.ID.Hex()
-		token, refreshtoken, _ := generate.TokenGenerator(user.Email, *user.First_Name, *user.Last_Name, *user, User_ID)
+		token, refreshtoken, _ := generate.TokenGenerator(*user.Email, *user.First_Name, *user.Last_Name, user.User_ID)
 		user.Token = &token
 		user.Refresh_Token = &refreshtoken
 		user.UserCart = make([]models.ProductUser, 0)
@@ -119,7 +122,7 @@ func Login() gin.HandlerFunc {
 		var founduser models.User
 		var user models.User
 		if err := c.BindJSON(&user); err != nil {
-			c.JSON{http.StatusBadRequest, gin.H{"error": err.Error()}}
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
 		}
 
@@ -140,10 +143,10 @@ func Login() gin.HandlerFunc {
 			fmt.Println(msg)
 			return
 		}
-		token, refreshtoken, _ := generate.TokenGenerator(*founduser.Email, *founduser.First_Name, *founduser.Last_Name, *founduser.User_ID)
+		token, refreshToken, _ := generate.TokenGenerator(*founduser.Email, *founduser.First_Name, *founduser.Last_Name, founduser.User_ID)
 		defer cancel()
 
-		generate.UpdateAllTokens(token, refreshtoken, *founduser.User_ID)
+		generate.UpdateAllTokens(token, refreshToken, founduser.User_ID)
 
 		c.JSON(http.StatusFound, founduser)
 
@@ -188,15 +191,15 @@ func SearchProduct() gin.HandlerFunc {
 
 		err = cursor.All(ctx, &productlist)
 		if err != nil {
-			log.PrintLn(err)
-			c.AbortWithError(http.StatusInternalServerError)
+			log.Println(err)
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
 		defer cursor.Close(ctx)
 
 		if err := cursor.Err(); err != nil {
-			log.PrintLn(err)
+			log.Println(err)
 			c.IndentedJSON(400, "invalid")
 			return
 		}
@@ -211,7 +214,7 @@ func SearchProductByQuery() gin.HandlerFunc {
 		queryParam := c.Query("name")
 
 		if queryParam == "" {
-			log.PrintLn("no query param")
+			log.Println("no query param")
 			c.Header("Content-Type", "application/json")
 			c.JSON(http.StatusNotFound, gin.H{"Error": "Invalid query param"})
 			c.Abort()
@@ -229,15 +232,15 @@ func SearchProductByQuery() gin.HandlerFunc {
 
 		err = searchquerydb.All(ctx, &searchProducts)
 		if err != nil {
-			log.PrintLn(err)
+			log.Println(err)
 			c.IndentedJSON(400, "invalid")
 			return
 		}
 
 		defer searchquerydb.Close(ctx)
 
-		if err := searchquerydb.err(); err != nil {
-			log.PrintLn(err)
+		if err := searchquerydb.Err(); err != nil {
+			log.Println(err)
 			c.IndentedJSON(400, "invalid request")
 			return
 		}

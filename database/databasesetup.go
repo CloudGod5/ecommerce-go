@@ -29,11 +29,11 @@ func DbSet() *mongo.Client {
 
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
-		log.PrintLn("failed to connect to mongodb")
+		log.Println("failed to connect to mongodb")
 		return nil
 	}
 
-	fmt.PrintLn("Successfully connected to mongodb")
+	fmt.Println("Successfully connected to mongodb")
 	return client
 
 }

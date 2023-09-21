@@ -6,20 +6,20 @@ import (
 	"log"
 	"time"
 
-	"github.com/CloudGod5/models"
+	"github.com/justintingley/ecommerce-go/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
-	ErrCantFindProduct    = error.New("can't find the product")
-	ErrCantDecodeProduct  = error.New("can't find this product")
-	ErrUserIdIsNotValid   = error.New("this user is not valid")
-	ErrCantUpdateUser     = error.New("can't add this product to the cart")
-	ErrCantRemoveItemCart = error.New("can't remove this item from the cart")
-	ErrCantGetItem        = error.New("unable to get the item from the cart")
-	ErrCantBuyCartItem    = error.New("can't update the purchase")
+	ErrCantFindProduct    = errors.New("can't find product")
+	ErrCantDecodeProducts = errors.New("can't find product")
+	ErrUserIDIsNotValid   = errors.New("user is not valid")
+	ErrCantUpdateUser     = errors.New("cannot add product to cart")
+	ErrCantRemoveItem     = errors.New("cannot remove item from cart")
+	ErrCantGetItem        = errors.New("cannot get item from cart ")
+	ErrCantBuyCartItem    = errors.New("cannot update the purchase")
 )
 
 func AddProductToCart(ctx context.Context, prodCollection, userCollection *mongo.Collection, productID primitive.ObjectID, userID string) error {
@@ -33,13 +33,13 @@ func AddProductToCart(ctx context.Context, prodCollection, userCollection *mongo
 	err = searchfromdb.All(ctx, &productCart)
 	if err != nil {
 		log.Println(err)
-		return ErrCantDecodeProduct
+		return ErrCantDecodeProducts
 	}
 
 	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		log.Println(err)
-		return ErrUserIdIsNotValid
+		return ErrUserIDIsNotValid
 	}
 
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
@@ -59,7 +59,7 @@ func RemoveCartItem(ctx context.Context, prodCollection, userCollection *mongo.C
 	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		log.Println(err)
-		return ErrUserIdIsNotValid
+		return ErrUserIDIsNotValid
 	}
 
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
@@ -68,26 +68,26 @@ func RemoveCartItem(ctx context.Context, prodCollection, userCollection *mongo.C
 	_, err = userCollection.UpdateMany(ctx, filter, update)
 	if err != nil {
 		log.Println(err)
-		return ErrCantRemoveItemCart
+		return ErrCantRemoveItem
 	}
 
 	return nil
 
 }
 
-func BuyItemFromCart(ctx context.Context, usercollection *mongo.Collection, userID string) error {
+func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, userID string) error {
 
 	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		log.Println(err)
-		return ErrUserIdIsNotValid
+		return ErrUserIDIsNotValid
 	}
 
 	var getcartitems models.User
 	var ordercart models.Order
 
 	ordercart.Order_ID = primitive.NewObjectID()
-	ordercart.Ordered_At = time.Now()
+	ordercart.Orderered_At = time.Now()
 	ordercart.Order_Cart = make([]models.ProductUser, 0)
 	ordercart.Payment_Method.COD = true
 
@@ -116,8 +116,7 @@ func BuyItemFromCart(ctx context.Context, usercollection *mongo.Collection, user
 	if err != nil {
 		log.Println(err)
 	}
-
-	err = usercollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: id}}).Decode(&getcartitems)
+	err = userCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: id}}).Decode(&getcartitems)
 	if err != nil {
 		log.Println(err)
 	}
@@ -131,7 +130,7 @@ func BuyItemFromCart(ctx context.Context, usercollection *mongo.Collection, user
 
 	usercart_empty := make([]models.ProductUser, 0)
 	filter3 := bson.D{primitive.E{Key: "_id", Value: id}}
-	update3 := bson.D{{key: "$set", Value: bson.D{primitive.E{key: "usercart", Value: usercart_empty}}}}
+	update3 := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "usercart", Value: usercart_empty}}}}
 	_, err = userCollection.UpdateOne(ctx, filter3, update3)
 	if err != nil {
 		return ErrCantBuyCartItem
@@ -144,18 +143,18 @@ func InstantBuyer(ctx context.Context, prodCollection, userCollection *mongo.Col
 	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		log.Println(err)
-		return ErrUserIdIsNotValid
+		return ErrUserIDIsNotValid
 	}
 
 	var product_details models.ProductUser
 	var orders_detail models.Order
 
 	orders_detail.Order_ID = primitive.NewObjectID()
-	orders_detail.Ordered_At = time.Now()
+	orders_detail.Orderered_At = time.Now()
 	orders_detail.Order_Cart = make([]models.ProductUser, 0)
 	orders_detail.Payment_Method.COD = true
 
-	err = prodCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: productID}}).Decode(&product_details)
+	err = prodCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: productId}}).Decode(&product_details)
 	if err != nil {
 		log.Println(err)
 	}
@@ -164,7 +163,7 @@ func InstantBuyer(ctx context.Context, prodCollection, userCollection *mongo.Col
 
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
 	update := bson.D{{Key: "$push", Value: bson.D{primitive.E{Key: "orders", Value: orders_detail}}}}
-	_, err := userCollection.UpdateOne(ctx, filter, update)
+	_, err = userCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		log.Println(err)
 	}

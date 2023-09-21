@@ -2,27 +2,28 @@ package middleware
 
 import (
 	"net/http"
-	token "github.com/CloudGod5/ecommerce-go/tokens"
+
+	token "github.com/justintingley/ecommerce-go/tokens"
+
 	"github.com/gin-gonic/gin"
 )
 
 func Authentication() gin.HandlerFunc {
-	return function(c *gin.Context) {
+	return func(c *gin.Context) {
 		ClientToken := c.Request.Header.Get("token")
 		if ClientToken == "" {
-			c.JSON(http.StatusInternalServerError, gin.H{"error":"No Authorization header provided"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "No Authorization Header Provided"})
 			c.Abort()
 			return
 		}
-		Claims, err := token,ValidateToken(ClientToken)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error":err.Error()})
+		claims, err := token.ValidateToken(ClientToken)
+		if err != "" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 			c.Abort()
 			return
 		}
-
-		c.Set("email", Claims.Email)
-		c.Set("uid", Claims.Uid)
+		c.Set("email", claims.Email)
+		c.Set("uid", claims.Uid)
 		c.Next()
 	}
 }

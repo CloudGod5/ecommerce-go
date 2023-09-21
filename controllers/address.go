@@ -6,14 +6,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CloudGod5/models"
+	"github.com/justintingley/ecommerce-go/models"
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func AddAddress() gin.Handlerfunc {
+func AddAddress() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
@@ -31,18 +32,16 @@ func AddAddress() gin.Handlerfunc {
 		}
 
 		var addresses models.Address
-
-		address.Address = primitive.NewObjectID()
-
-		if err := c.BindJSON(&addresses); err != nil {
+		addresses.Address_id = primitive.NewObjectID()
+		if err = c.BindJSON(&addresses); err != nil {
 			c.IndentedJSON(http.StatusNotAcceptable, err.Error())
 		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
-		match_filter := bson.D{{key: "$match", Value: bson.D{primitive.E{Key: "_id", Value: address}}}}
-		unwind := bson.D{{key: "$unwind", Value: bson.D{primitive.E{Key: "path", Value: "$address"}}}}
-		group := bson.D{{key: "$group", Value: bson.D{primitive.E{Key: "_id", Value: "$address_id"}, {key: "count", Value: bson.D{primitive.E{Key: "$sum", Value: 1}}}}}}
+		match_filter := bson.D{{Key: "$match", Value: bson.D{primitive.E{Key: "_id", Value: address}}}}
+		unwind := bson.D{{Key: "$unwind", Value: bson.D{primitive.E{Key: "path", Value: "$address"}}}}
+		group := bson.D{{Key: "$group", Value: bson.D{primitive.E{Key: "_id", Value: "$address_id"}, {Key: "count", Value: bson.D{primitive.E{Key: "$sum", Value: 1}}}}}}
 		pointcursor, err := UserCollection.Aggregate(ctx, mongo.Pipeline{match_filter, unwind, group})
 		if err != nil {
 			c.IndentedJSON(500, "Internal Server Error")
@@ -55,18 +54,17 @@ func AddAddress() gin.Handlerfunc {
 
 		var size int32
 		for _, address_no := range addressinfo {
-		count := address_no["count"]
-		size = count.(int32)
+			count := address_no["count"]
+			size = count.(int32)
 		}
 		if size < 2 {
-			fileter := bson.D{primitive.E{Key: "_id", Value: address}}
+			filter := bson.D{primitive.E{Key: "_id", Value: address}}
 			update := bson.D{{Key: "$push", Value: bson.D{primitive.E{Key: "address", Value: addresses}}}}
 			_, err := UserCollection.UpdateOne(ctx, filter, update)
 			if err != nil {
 				fmt.Println(err)
 			}
-		} 
-		else {
+		} else {
 			c.IndentedJSON(400, "Not Allowed")
 		}
 		defer cancel()
@@ -75,7 +73,7 @@ func AddAddress() gin.Handlerfunc {
 	}
 }
 
-func EditHomeAddress() gin.Handlerfunc {
+func EditHomeAddress() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		user_id := c.Query("id")
@@ -96,28 +94,28 @@ func EditHomeAddress() gin.Handlerfunc {
 			c.IndentedJSON(http.StatusNotAcceptable, err.Error())
 		}
 
-		 var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		 defer cancel()
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
-		 filter := bson.D{primitive.E{Key: "_id", Value: usert_id}}
-		 update := bson.D{{key:"$set", Value: bson.D{primitive.E{Key: "address.0.house_name", Value: editaddress.House}, {key:"address.0.street_name", Value: editaddress.Street}, {key:"address.0.city_name", Value: editaddress.City}, {key:"address.0.state", Value: editaddress.State}, {key:"address.0.pin_code", Value: editaddress.Pincode}}}}
-		 _, err = UserCollection.UpdateOne(ctx, filter, update)
-		 if err != nil {
-			 c.IndentedJSON(500, "Something went wrong")
-			 return
-		 }
-		 defer cancel()
+		filter := bson.D{primitive.E{Key: "_id", Value: usert_id}}
+		update := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "address.0.house_name", Value: editaddress.House}, {Key: "address.0.street_name", Value: editaddress.Street}, {Key: "address.0.city_name", Value: editaddress.City}, {Key: "address.0.pin_code", Value: editaddress.Pincode}}}}
+		_, err = UserCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			c.IndentedJSON(500, "Something went wrong")
+			return
+		}
+		defer cancel()
 
-		 ctx.Done()
-		 c.IndentedJSON(200, "Address updated successfully")
+		ctx.Done()
+		c.IndentedJSON(200, "Address updated successfully")
 
 	}
 }
 
-func EditWorkAddress() gin.Handlerfunc {
-		
+func EditWorkAddress() gin.HandlerFunc {
+
 	return func(c *gin.Context) {
-			user_id := c.Query("id")
+		user_id := c.Query("id")
 		if user_id == "" {
 			c.Header("Content-Type", "application/json")
 			c.JSON(http.StatusNotFound, gin.H{"Error": "Invalid search param"})
@@ -135,25 +133,25 @@ func EditWorkAddress() gin.Handlerfunc {
 			c.IndentedJSON(http.StatusBadRequest, err.Error())
 		}
 
-		 var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		 defer cancel()
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
-		 filter := bson.D{primitive.E{Key: "_id", Value: usert_id}}
-		 update := bson.D{{key:"$set", Value: bson.D{primitive.E{Key: "address.1.house_name", Value: editaddress.House}, {key:"address.1.street_name", Value: editaddress.Street}, {key:"address.1.city_name", Value: editaddress.City}, {key:"address.1.state", Value: editaddress.State}, {key:"address.1.pin_code", Value: editaddress.Pincode}}}}
-		 _, err = UserCollection.UpdateOne(ctx, filter, update)
-		 if err != nil {
-			 c.IndentedJSON(500, "Something went wrong")
-			 return
-		 }
-		 defer cancel()
+		filter := bson.D{primitive.E{Key: "_id", Value: usert_id}}
+		update := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "address.1.house_name", Value: editaddress.House}, {Key: "address.1.street_name", Value: editaddress.Street}, {Key: "address.1.city_name", Value: editaddress.City}, {Key: "address.1.pin_code", Value: editaddress.Pincode}}}}
+		_, err = UserCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			c.IndentedJSON(500, "Something went wrong")
+			return
+		}
+		defer cancel()
 
-		 ctx.Done()
-		 c.IndentedJSON(200, "Address updated the work successfully")
+		ctx.Done()
+		c.IndentedJSON(200, "Address updated the work successfully")
 
 	}
 }
 
-func DeleteAddress() gin.Handlerfunc {
+func DeleteAddress() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user_id := c.Query("id")
 
@@ -173,7 +171,7 @@ func DeleteAddress() gin.Handlerfunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
-		filter := bson.D(primitive.E{Key: "_id", Value: user_id})
+		filter := bson.D{primitive.E{Key: "_id", Value: usert_id}}
 		update := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "address", Value: addresses}}}}
 
 		_, err = UserCollection.UpdateOne(ctx, filter, update)
