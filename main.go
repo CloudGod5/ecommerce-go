@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/justintingley/ecommerce-go/controllers"
-	"github.com/justintingley/ecommerce-go/database"
+	"github.com/CloudGod5/ecommerce-go/controllers"
+	"github.com/CloudGod5/ecommerce-go/database"
 
-	"github.com/justintingley/ecommerce-go/middleware"
-	"github.com/justintingley/ecommerce-go/routes"
+	"github.com/CloudGod5/ecommerce-go/middleware"
+	"github.com/CloudGod5/ecommerce-go/routes"
 )
 
 func formhandler(w http.ResponseWriter, r *http.Request) {

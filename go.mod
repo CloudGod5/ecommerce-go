@@ -1,4 +1,4 @@
-module github.com/justintingley/ecommerce-go
+module github.com/CloudGod5/ecommerce-go
 
 go 1.23
 
